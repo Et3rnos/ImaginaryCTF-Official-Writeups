@@ -145,7 +145,18 @@ Each individual byte is the result of a left-rotation by one more bit than the p
 
 ## Spacebar Smasher
 
-Use the CETUS extension to exploit this web assembly game.
+INTENDED SOLUTION
+The intended solution was to use the CETUS web extension (which could easily be found by searching up "Hack web assembly games") and modifying the value.
+
+We will search for 0 first, and then break a spacebar, then search for 1, then break another, etc... until we get a single memory value which we can bookmark. (this method was on the tutorial on its GitHub page). Change the value on the bookmarks tab, and there's the flag!
+
+UNINTENDED SOLUTION - Strings + grep (chopswiss + tirefire)
+I specifically encoded the flag link in base64 so people couldn't guess it easily, but some people had troubles playing the game. They guessed base64, and strings'd the data file which you could get by viewing source, and then grepped for "==". They found the flag that way.
+
+UNINTENDED SOLUTION - Automation
+There was an (unintended) bug where if you click off the tab (like into your taskbar), the breaking animation stops. I am not sure if anyone used this method, but if you are fast enough, could be feasible.
+
+
 
 ## lookup-rev
 
