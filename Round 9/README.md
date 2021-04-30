@@ -1,24 +1,19 @@
-+=============================================+
-I                   READ ME                   I
-+=============================================+
-I THE FOLLOWING WRITEUPS WERE PROVIDED BY THE I
-I        RESPECTIVE CHALLENGE AUTHORS         I
-+=============================================+
-I     COMPILATION MADE WITH <3 BY ET3RNOS     I
-+=============================================+
+## Round 9 Official Writeups
 
-Sanity Check Round 9
-=================================
+The following writeups were provided by the respective challenge authors
+
+### Sanity Check Round 9
+
 Get file, go to yt link, scroll to bottom o desc, copy and submit flag
 
 
-Rotations
-=================================
+### Rotations
+
 This cipher is a modern twist on the Caesar cipher, with a rotation through ASCII characters. Rotate each character by a rotation of 47 to get `ictf{l3ts_st4rt_0ut_ez_w1th_s0me_r0t47!}`.  (https://gchq.github.io/CyberChef/#recipe=ROT47(47)&input=OjRFN0w9YkVEMERFY0NFMF9GRTA2SzBIYEU5MERfPjYwQ19FY2ZQTg)
 
 
-Salty
-=================================
+### Salty
+
 Upon inspection, we notice that the program simulates a bash shell, but if the input's hash, salted with "salt", matches a XOR encrypted string, the program will print out a link to a pastebin with the password being the password that makes the hash. Using Crackstation or another hash cracking tool, we find that the salted hash corresponds to "saltwater", and without the salt of "salt" the password becomes just "water". So, we enter that into the program, go to https://pastebin.com/vU76aJvC (the link the program gives), and enter in the password "water". We get the flag: ictf{s4lty_w4ter_1nd33d_4f285a3}
 
 
