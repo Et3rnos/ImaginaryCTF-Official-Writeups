@@ -273,6 +273,7 @@ Read the figlet which translates ascii to ascii word art, and reply to the serve
 from pwn import *
 from pyfiglet import Figlet
 
+#this file has the words from the Wikipedia article
 with open('hamletsoliloquy.txt') as f:
     lines = f.read()
 
