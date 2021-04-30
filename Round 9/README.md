@@ -267,6 +267,38 @@ p.interactive()
 
 Read the figlet which translates ascii to ascii word art, and reply to the server 250 times with the correct value. The possible text is from https://en.wikipedia.org/wiki/To_be,_or_not_to_be.
 
+```python
+#!/usr/bin/env python
+
+from pwn import *
+from pyfiglet import Figlet
+
+with open('hamletsoliloquy.txt') as f:
+    lines = f.read()
+
+f = Figlet()
+
+tobeornottobe = {}
+for line in lines.splitlines():
+    for word in line.split(' '):
+        tobeornottobe[f.renderText(word)] = word
+
+r = remote('tirefire.org', 11051)
+#r = remote('proud-silence-2495.fly.dev', 10051)
+
+r.recvuntil(b's)\n')
+while True:
+    try:
+        fig = r.recvuntil('\n\n').decode()[:-1]
+    except:
+        r.interactive()
+    r.recvuntil(': ')
+    if fig in tobeornottobe:
+        r.sendline(tobeornottobe[fig])
+    else:
+        print(fig)
+```
+
 ## Just in Time 1
 
 Try times near the current time until one matches the given random number, then use that seed.
