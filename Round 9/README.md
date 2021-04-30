@@ -51,7 +51,7 @@ Login page --> HTML hidden comments(Scroll down a lot) --> /robots.txt --> /clas
 The bytecode is fairly easy to read, we see a loop being setup over a constant list that's embedded in the disassembly.
 The reconstructed code is:
 
-```
+```python
 def f(n):
     for x in [0, 6, -17, 14, -21, 25, -23, 5, 15, 2, -12, 11, -1, 6, -4, -12, -6, 9, 8, 5, -3, -3, 6, -6, 4, -18, -6, 26, -2, -18, 20, -17, -9, -4]:
         n -= x
